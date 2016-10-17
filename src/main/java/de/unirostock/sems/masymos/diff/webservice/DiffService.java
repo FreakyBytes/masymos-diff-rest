@@ -1,5 +1,9 @@
 package de.unirostock.sems.masymos.diff.webservice;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
+
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -13,6 +17,7 @@ import javax.ws.rs.core.Response.Status;
 import org.neo4j.graphdb.GraphDatabaseService;
 
 import de.unirostock.sems.masymos.diff.DiffExecutor;
+import de.unirostock.sems.masymos.diff.thread.PriorityExecutor;
 
 @Path( "/diff/service" )
 public class DiffService {
@@ -33,7 +38,17 @@ public class DiffService {
 	@Path( "/status" )
 	@Produces( MediaType.APPLICATION_JSON )
 	public Response getQueueStatus() {
-		return Response.status( Status.NOT_IMPLEMENTED ).build();
+		Map<String, Object> status = new HashMap<>();
+		PriorityExecutor executor = DiffExecutor.instance().getExecutor();
+		
+		status.put("minPoolSize", executor.getCorePoolSize());
+		status.put("maxPoolSize", executor.getMaximumPoolSize());
+		status.put("currentPoolSize", executor.getPoolSize());
+		status.put("activeTasks", executor.getActiveCount());
+		status.put("queuedTasks", executor.getQueue().size());
+		status.put("completedTasks", executor.getCompletedTaskCount());
+		
+		return Response.status( Status.OK ).entity(status).build();
 	}
 	
 	/**
@@ -44,7 +59,20 @@ public class DiffService {
 	@Consumes( MediaType.APPLICATION_JSON )
 	@Produces( MediaType.APPLICATION_JSON )
 	public Response triggerDiffGeneration() {
-		return Response.status( Status.NOT_IMPLEMENTED ).build();
+		Map<String, Object> status = new HashMap<>();
+		DiffExecutor executer = DiffExecutor.instance();
+		
+		try {
+			executer.generateDiffs(0, false);
+			status.put("status", "ok");
+			return Response.status( Status.OK ).entity(status).build();
+		} catch (InterruptedException | ExecutionException e) {
+			status.put("status", "error");
+			status.put("message", e.getMessage());
+			status.put("stacktrace", e.getStackTrace().toString());
+			return Response.status( Status.INTERNAL_SERVER_ERROR ).entity(status).build();
+		}
+		
 	}
 	
 	
