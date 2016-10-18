@@ -16,19 +16,20 @@ import javax.ws.rs.core.Response.Status;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import de.unirostock.sems.masymos.diff.DiffExecutor;
+import de.unirostock.sems.masymos.diff.ManagerUtil;
 import de.unirostock.sems.masymos.diff.thread.PriorityExecutor;
 
 @Path( "/diff/service" )
 public class DiffService {
 	
-	protected final GraphDatabaseService graphDb;
-	protected final DiffExecutor diffExecutor;
+	protected final ObjectMapper objectMapper = new ObjectMapper();
+	
 	
 	public DiffService( @Context GraphDatabaseService graphDb) {
-		// init everything
-		this.graphDb = graphDb;
-		this.diffExecutor = DiffExecutor.instance();
 	}
 	
 	/**
@@ -37,7 +38,9 @@ public class DiffService {
 	@GET
 	@Path( "/status" )
 	@Produces( MediaType.APPLICATION_JSON )
-	public Response getQueueStatus() {
+	public Response getQueueStatus(@Context GraphDatabaseService graphDb) {
+		ManagerUtil.initManager(graphDb);
+		
 		Map<String, Object> status = new HashMap<>();
 		PriorityExecutor executor = DiffExecutor.instance().getExecutor();
 		
@@ -53,12 +56,15 @@ public class DiffService {
 	
 	/**
 	 * Triggers the diff generation in the DiffExecutor queue
+	 * @throws JsonProcessingException 
 	 */
 	@POST
 	@Path( "/trigger" )
 	@Consumes( MediaType.APPLICATION_JSON )
 	@Produces( MediaType.APPLICATION_JSON )
-	public Response triggerDiffGeneration() {
+	public Response triggerDiffGeneration(@Context GraphDatabaseService graphDb) throws JsonProcessingException {
+		ManagerUtil.initManager(graphDb);
+		
 		Map<String, Object> status = new HashMap<>();
 		DiffExecutor executer = DiffExecutor.instance();
 		
@@ -70,7 +76,7 @@ public class DiffService {
 			status.put("status", "error");
 			status.put("message", e.getMessage());
 			status.put("stacktrace", e.getStackTrace().toString());
-			return Response.status( Status.INTERNAL_SERVER_ERROR ).entity(status).build();
+			return Response.status( Status.OK ).entity( objectMapper.writeValueAsString(status) ).build();
 		}
 		
 	}
@@ -82,7 +88,9 @@ public class DiffService {
 	@GET
 	@Path( "/stats" )
 	@Produces( MediaType.APPLICATION_JSON )
-	public Response getStats() {
+	public Response getStats(@Context GraphDatabaseService graphDb) {
+		ManagerUtil.initManager(graphDb);
+		
 		return Response.status( Status.NOT_IMPLEMENTED ).build();
 	}
 }
