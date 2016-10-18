@@ -34,11 +34,12 @@ public class DiffService {
 	
 	/**
 	 * Returns the status of the current DiffExecutor queue 
+	 * @throws JsonProcessingException 
 	 */
 	@GET
 	@Path( "/status" )
 	@Produces( MediaType.APPLICATION_JSON )
-	public Response getQueueStatus(@Context GraphDatabaseService graphDb) {
+	public Response getQueueStatus(@Context GraphDatabaseService graphDb) throws JsonProcessingException {
 		ManagerUtil.initManager(graphDb);
 		
 		Map<String, Object> status = new HashMap<>();
@@ -51,7 +52,7 @@ public class DiffService {
 		status.put("queuedTasks", executor.getQueue().size());
 		status.put("completedTasks", executor.getCompletedTaskCount());
 		
-		return Response.status( Status.OK ).entity(status).build();
+		return Response.status( Status.OK ).entity( objectMapper.writeValueAsString(status) ).build();
 	}
 	
 	/**
@@ -71,12 +72,12 @@ public class DiffService {
 		try {
 			executer.generateDiffs(0, false);
 			status.put("status", "ok");
-			return Response.status( Status.OK ).entity(status).build();
+			return Response.status( Status.OK ).entity( objectMapper.writeValueAsString(status) ).build();
 		} catch (InterruptedException | ExecutionException e) {
 			status.put("status", "error");
 			status.put("message", e.getMessage());
 			status.put("stacktrace", e.getStackTrace().toString());
-			return Response.status( Status.OK ).entity( objectMapper.writeValueAsString(status) ).build();
+			return Response.status( Status.INTERNAL_SERVER_ERROR ).entity( objectMapper.writeValueAsString(status) ).build();
 		}
 		
 	}
