@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import de.unirostock.sems.masymos.diff.DiffExecutor;
 import de.unirostock.sems.masymos.diff.ManagerUtil;
 import de.unirostock.sems.masymos.diff.thread.PriorityExecutor;
+import scala.collection.convert.Wrappers.SeqWrapper;
 
 @Path( "/diff/service" )
 public class DiffService {
@@ -87,11 +88,12 @@ public class DiffService {
 	
 	/**
 	 * Returns some statistics, regarding diffs in the database
+	 * @throws JsonProcessingException 
 	 */
 	@GET
 	@Path( "/stats" )
 	@Produces( MediaType.APPLICATION_JSON )
-	public Response getStats(@Context GraphDatabaseService graphDb) {
+	public Response getStats(@Context GraphDatabaseService graphDb) throws JsonProcessingException {
 		ManagerUtil.initManager(graphDb);
 		Map<String, Object> status = new HashMap<>();
 		
@@ -102,7 +104,7 @@ public class DiffService {
 			Result diffTypeStatResult = graphDb.execute("Match (d:DIFF_NODE) Return DISTINCT labels(d) as label, count(d) as count;");
 			while( diffTypeStatResult.hasNext() ) {
 				Map<String, Object> row = diffTypeStatResult.next();
-				for( String label : (String[]) row.get("label") ) {
+				for( String label : (SeqWrapper<String>) row.get("label") ) {
 					status.put("count_" + label, (status.containsKey("count_" + label) ? (long) status.get("count_" + label) : 0) + (long) row.get("count") ); 
 				}
 			}
@@ -120,6 +122,6 @@ public class DiffService {
 			
 		}
 		
-		return Response.status( Status.OK ).entity(status).build();
+		return Response.status( Status.OK ).entity( objectMapper.writeValueAsString(status) ).build();
 	}
 }
