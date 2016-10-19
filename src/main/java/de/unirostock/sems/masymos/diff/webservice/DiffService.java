@@ -15,6 +15,8 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.Transaction;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -91,7 +93,33 @@ public class DiffService {
 	@Produces( MediaType.APPLICATION_JSON )
 	public Response getStats(@Context GraphDatabaseService graphDb) {
 		ManagerUtil.initManager(graphDb);
+		Map<String, Object> status = new HashMap<>();
 		
-		return Response.status( Status.NOT_IMPLEMENTED ).build();
+		
+		try ( Transaction tx = graphDb.beginTx() ) {
+			
+			// statistics about overall count of different DIFF_NODE types
+			Result diffTypeStatResult = graphDb.execute("Match (d:DIFF_NODE) Return DISTINCT labels(d) as label, count(d) as count;");
+			while( diffTypeStatResult.hasNext() ) {
+				Map<String, Object> row = diffTypeStatResult.next();
+				for( String label : (String[]) row.get("label") ) {
+					status.put("count_" + label, (status.containsKey("count_" + label) ? (long) status.get("count_" + label) : 0) + (long) row.get("count") ); 
+				}
+			}
+			diffTypeStatResult.close();
+			
+			// average versions per model
+			Result versionStatResult = graphDb.execute("Match (d:DOCUMENT) Return count(distinct d.FILEID) as count_DISTINCT_DOCUMENT, count(d) as count_DOCUMENT, count(d)/count(distinct d.FILEID) as average_VERSION_PER_MODEL;");
+			if( versionStatResult.hasNext() ) {
+				Map<String, Object> row = versionStatResult.next();
+				status.put("count_DISTINCT_DOCUMENT", row.get("count_DISTINCT_DOCUMENT"));
+				status.put("count_DOCUMENT", row.get("count_DOCUMENT"));
+				status.put("average_VERSION_PER_MODEL", row.get("average_VERSION_PER_MODEL"));
+			}
+			versionStatResult.close();
+			
+		}
+		
+		return Response.status( Status.OK ).entity(status).build();
 	}
 }
