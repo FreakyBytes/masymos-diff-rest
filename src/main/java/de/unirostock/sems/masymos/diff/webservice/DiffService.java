@@ -90,6 +90,7 @@ public class DiffService {
 	 * Returns some statistics, regarding diffs in the database
 	 * @throws JsonProcessingException 
 	 */
+	@SuppressWarnings("unchecked")
 	@GET
 	@Path( "/stats" )
 	@Produces( MediaType.APPLICATION_JSON )
