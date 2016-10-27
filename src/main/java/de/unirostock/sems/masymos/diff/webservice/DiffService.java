@@ -26,7 +26,7 @@ import de.unirostock.sems.masymos.diff.ManagerUtil;
 import de.unirostock.sems.masymos.diff.thread.PriorityExecutor;
 import scala.collection.convert.Wrappers.SeqWrapper;
 
-@Path( "/diff/service" )
+@Path( "/service" )
 public class DiffService {
 	
 	protected final ObjectMapper objectMapper = new ObjectMapper();
