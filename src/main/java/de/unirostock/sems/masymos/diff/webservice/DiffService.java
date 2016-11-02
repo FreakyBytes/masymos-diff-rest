@@ -21,6 +21,7 @@ import org.neo4j.graphdb.Transaction;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import de.unirostock.sems.masymos.diff.DiffCleanTask.RemovalMethod;
 import de.unirostock.sems.masymos.diff.DiffExecutor;
 import de.unirostock.sems.masymos.diff.ManagerUtil;
 import de.unirostock.sems.masymos.diff.thread.PriorityExecutor;
@@ -74,6 +75,33 @@ public class DiffService {
 		
 		try {
 			executer.generateDiffs(0, false);
+			status.put("status", "ok");
+			return Response.status( Status.OK ).entity( objectMapper.writeValueAsString(status) ).build();
+		} catch (InterruptedException | ExecutionException e) {
+			status.put("status", "error");
+			status.put("message", e.getMessage());
+			status.put("stacktrace", e.getStackTrace().toString());
+			return Response.status( Status.INTERNAL_SERVER_ERROR ).entity( objectMapper.writeValueAsString(status) ).build();
+		}
+		
+	}
+	
+	/**
+	 * Submits a cleaning task that removes all diffs from the database
+	 * @throws JsonProcessingException
+	 */
+	@POST
+	@Path( "/clean" )
+	@Consumes( MediaType.APPLICATION_JSON )
+	@Produces( MediaType.APPLICATION_JSON )
+	public Response cleanDiffs(@Context GraphDatabaseService graphDb) throws JsonProcessingException {
+		ManagerUtil.initManager(graphDb);
+		
+		Map<String, Object> status = new HashMap<>();
+		DiffExecutor executor = DiffExecutor.instance();
+		
+		try {
+			executor.cleanDiffs(RemovalMethod.TRAVERSAL, false);
 			status.put("status", "ok");
 			return Response.status( Status.OK ).entity( objectMapper.writeValueAsString(status) ).build();
 		} catch (InterruptedException | ExecutionException e) {
