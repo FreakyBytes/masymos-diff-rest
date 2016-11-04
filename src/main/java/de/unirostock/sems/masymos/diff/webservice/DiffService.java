@@ -129,6 +129,13 @@ public class DiffService {
 		
 		try ( Transaction tx = graphDb.beginTx() ) {
 			
+			// overall number of DIFFs
+			Result diffCountResult = graphDb.execute("Match (d:DIFF) Return count(d) as count;");
+			if( diffCountResult.hasNext() ) {
+				Map<String, Object> row = diffCountResult.next();
+				status.put("count_DIFF", row.get("count"));
+			}
+			
 			// statistics about overall count of different DIFF_NODE types
 			Result diffTypeStatResult = graphDb.execute("Match (d:DIFF_NODE) Return DISTINCT labels(d) as label, count(d) as count;");
 			while( diffTypeStatResult.hasNext() ) {
